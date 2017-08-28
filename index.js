@@ -39,7 +39,7 @@ function compute(task) {
 				'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.101 Safari/537.36',
 			},
 			maxRedirects: 4,
-			timeout: 2000,
+			timeout: 15000,
 		}, async (err, response, body) => {
 			console.log('DONE ---->', task);
 			if(err) {
@@ -56,7 +56,7 @@ function compute(task) {
 				const $ = cheerio.load(body);
 				await results.write({
 					url: task,
-					text: $('body').text().replace(/(?:\s|\n|\r|)+/g, ' '),
+					text: $('body').text().replace(/(?:\s|\n|\r|<[^>]*>)+/g, ' '),
 				});
 			}
 			resolve();
