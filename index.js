@@ -39,7 +39,7 @@ function compute(task) {
 				'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.101 Safari/537.36',
 			},
 			maxRedirects: 4,
-			timeout: 90000,
+			timeout: 2000,
 		}, async (err, response, body) => {
 			console.log('DONE ---->', task);
 			if(err) {
@@ -56,7 +56,7 @@ function compute(task) {
 				const $ = cheerio.load(body);
 				await results.write({
 					url: task,
-					text: $('body').text().replace(/(?:\s|\n|\r|<([^>]+?)>)+/g, ' '),
+					text: $('body').text().replace(/(?:\s|\n|\r|)+/g, ' '),
 				});
 			}
 			resolve();
@@ -65,37 +65,28 @@ function compute(task) {
 }
 
 
-(async () => {
-	let tasks = [];
-	let currentlyWorking = 0;
-	for(let i =0; i<source.length; i++) {
-		if(currentlyWorking%CONCURRENCY === 0 && currentlyWorking !== 0) {
-			await Promise.all(tasks);
-			console.log('BATCH Done' );
-			tasks = [];
-			currentlyWorking = 0;
-		}
-		else {
-			tasks.push(compute(source[i].field2));
-			currentlyWorking++;
-		}
-	}
-})();
-
-// const writable = fs.createWriteStream('./source.json');
-// writable.write('[');
-//
-// (() => {
-// 	csv({noheader:true})
-// 			.fromFile('./scheduled.csv')
-// 			.on('json', async (task) => {
-// 				// const callback = () => {
-// 				writable.write(JSON.stringify(task));
-// 				writable.write(',');
-// 				// };
-// 				// if(q.length)
-// 				// q.push(task.field2, callback);
-// 			})
-// 			.on('end', () => writable.write(']'));
+// (async () => {
+// 	let tasks = [];
+// 	let currentlyWorking = 0;
+// 	for(let i =0; i<source.length; i++) {
+// 		if(currentlyWorking%CONCURRENCY === 0 && currentlyWorking !== 0) {
+// 			await Promise.all(tasks);
+// 			console.log('BATCH Done' );
+// 			tasks = [];
+// 			currentlyWorking = 0;
 // 		}
-// )();
+// 		else {
+// 			tasks.push(compute(source[i].field2));
+// 			currentlyWorking++;
+// 		}
+// 	}
+// })();
+
+const q = async.queue(async (task, cb) => {
+	await compute(task);
+	cb(null);
+}, CONCURRENCY);
+
+source.forEach((curr) => {
+	q.push(curr.field2, () => { });
+});
