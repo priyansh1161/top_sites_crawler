@@ -37,7 +37,9 @@ function compute(task) {
 			method: 'GET',
 			headers: {
 				'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.101 Safari/537.36',
-			}
+			},
+			maxRedirects: 4,
+			timeout: 90000,
 		}, async (err, response, body) => {
 			console.log('DONE ---->', task);
 			if(err) {
