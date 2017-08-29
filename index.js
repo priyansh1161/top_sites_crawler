@@ -4,20 +4,20 @@ const fs = require('fs');
 const csvWriter = require('csv-write-stream');
 const async = require('async');
 const csv = require('csvtojson');
-const source = require('./source.json');
+const source = require(`./source_part_${process.env.PART || 0}.json`);
 
-const CONCURRENCY = 20;
+const CONCURRENCY = 50;
 
 class writeToStream  {
 	constructor(location) {
-		this.writer = csvWriter({ headers: ["url", "text", "meta"]});
+		this.writer = csvWriter({ headers: ["id", "url", "text", "description", "meta", "imgAlt"]});
 		// this.writer = fs.createWriteStream(location);
 		// this.writer.write('url,text,meta\n');
 		this.writer.pipe(fs.createWriteStream(location));
 	}
-	write({ url = '', text = '', meta = '' }) {
+	write({ index, url = '', text = '', description = '', meta = '', imgAlt }) {
 		return new Promise(resolve => {
-			this.writer.write([url, text, meta], () => resolve());
+			this.writer.write([index, url, text, description, meta, imgAlt], () => resolve());
 		});
 	}
 	close() {
@@ -28,7 +28,7 @@ class writeToStream  {
 const results =  new writeToStream('./out.csv');
 const errors =  new writeToStream('./errors.csv');
 
-function compute(task) {
+function compute(task, index) {
 	return new Promise((resolve) => {
 		const validURL = /^(http|https)./g;
 		if(!validURL.test(task)) {
@@ -45,58 +45,50 @@ function compute(task) {
 		}, async (err, response, body) => {
 			if(err) {
 				await errors.write({
+					index,
 					url: task,
 					text: `ERROR: ${err.message}`,
 				});
 			} else if(response.statusCode > 399) {
 				await errors.write({
+					index,
 					url: task,
 					text: `ERROR: ERROR STATUS CODE ${response.statusCode}`,
 				});
 			} else {
 				const $ = cheerio.load(body);
 				const $meta = $('meta[name="description"]'); // only get 1st description meta tag
-				console.log(typeof $meta);
-				const meta = $meta.attr('content');
+				let meta = '';
+				$('meta').each(function(i, curr) {
+					meta += $(this).attr('content') + ' . ';
+				});
+				let imgAlt = '';
+				$('img').each(function () {
+						imgAlt += $(this).attr('alt') + ' . ';
+				});
+				const description = $meta.attr('content');
 				await results.write({
+					index,
 					url: task,
 					text: $('body').text().replace(/(?:\s|\n|\r|<[^>]*>)+/g, ' '),
+					description,
 					meta,
+					imgAlt,
 				});
 			}
-			console.log('DONE ---->', task, ' with status ');
+			console.log('DONE ---->', task);
 			resolve();
 		});
 	})
 }
 
 
-// (async () => {
-// 	let tasks = [];
-// 	let currentlyWorking = 0;
-// 	for(let i =0; i<source.length; i++) {
-// 		if(currentlyWorking%CONCURRENCY === 0 && currentlyWorking !== 0) {
-// 			await Promise.all(tasks);
-// 			console.log('BATCH Done' );
-// 			tasks = [];
-// 			currentlyWorking = 0;
-// 		}
-// 		else {
-// 			tasks.push(compute(source[i].field2));
-// 			currentlyWorking++;
-// 		}
-// 	}
-// })();
-
-// ( async () => {
-// 	// await compute('http://facebook.com');
-// })();
 
 const q = async.queue(async (task, cb) => {
-	await compute(task);
+	await compute(task.url, task.index);
 	cb(null);
 }, CONCURRENCY);
 
-source.forEach((curr) => {
-	q.push(curr.field2, () => { });
+source.forEach((curr, index) => {
+	q.push({ url: curr.field2, index }, () => { });
 });
