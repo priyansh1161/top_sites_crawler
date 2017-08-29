@@ -11,6 +11,8 @@
   "dependencies": {
     "async": "^2.5.0",
     "cheerio": "^1.0.0-rc.2",
+    "csv-generate": "^1.0.0",
+    "csv-stringify": "^1.0.4",
     "csv-write-stream": "^2.0.0",
     "csvtojson": "^1.1.7",
     "request": "^2.81.0"

@@ -1,21 +1,23 @@
 const request = require('request');
 const cheerio = require('cheerio');
 const fs = require('fs');
+const csvWriter = require('csv-write-stream');
 const async = require('async');
 const csv = require('csvtojson');
-const csvWriter = require('csv-write-stream');
 const source = require('./source.json');
 
-const CONCURRENCY = 200;
+const CONCURRENCY = 20;
 
 class writeToStream  {
 	constructor(location) {
-		this.writer = csvWriter({ headers: ["url", "text"]});
+		this.writer = csvWriter({ headers: ["url", "text", "meta"]});
+		// this.writer = fs.createWriteStream(location);
+		// this.writer.write('url,text,meta\n');
 		this.writer.pipe(fs.createWriteStream(location));
 	}
-	write({ url, text }) {
+	write({ url = '', text = '', meta = '' }) {
 		return new Promise(resolve => {
-			this.writer.write([url, text], () => resolve());
+			this.writer.write([url, text, meta], () => resolve());
 		});
 	}
 	close() {
@@ -38,10 +40,9 @@ function compute(task) {
 			headers: {
 				'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.101 Safari/537.36',
 			},
-			maxRedirects: 4,
-			timeout: 15000,
+			maxRedirects: 6,
+			timeout: 25000,
 		}, async (err, response, body) => {
-			console.log('DONE ---->', task);
 			if(err) {
 				await errors.write({
 					url: task,
@@ -54,11 +55,16 @@ function compute(task) {
 				});
 			} else {
 				const $ = cheerio.load(body);
+				const $meta = $('meta[name="description"]'); // only get 1st description meta tag
+				console.log(typeof $meta);
+				const meta = $meta.attr('content');
 				await results.write({
 					url: task,
 					text: $('body').text().replace(/(?:\s|\n|\r|<[^>]*>)+/g, ' '),
+					meta,
 				});
 			}
+			console.log('DONE ---->', task, ' with status ');
 			resolve();
 		});
 	})
@@ -80,6 +86,10 @@ function compute(task) {
 // 			currentlyWorking++;
 // 		}
 // 	}
+// })();
+
+// ( async () => {
+// 	// await compute('http://facebook.com');
 // })();
 
 const q = async.queue(async (task, cb) => {
