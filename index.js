@@ -4,20 +4,26 @@ const fs = require('fs');
 const csvWriter = require('csv-write-stream');
 const async = require('async');
 const csv = require('csvtojson');
+const converter = require('json2csv');
 const source = require(`./source_part_${process.env.PART || 0}.json`);
 
 const CONCURRENCY = 50;
 
 class writeToStream  {
 	constructor(location) {
-		this.writer = csvWriter({ headers: ["id", "url", "text", "description", "meta", "imgAlt"]});
-		// this.writer = fs.createWriteStream(location);
-		// this.writer.write('url,text,meta\n');
-		this.writer.pipe(fs.createWriteStream(location));
+		// this.writer = csvWriter({ headers: ["id", "url", "text", "description", "meta", "imgAlt"]});
+		this.writer = fs.createWriteStream(location);
+		this.writer.write('"id","url","text","description","meta","imgAlt"\n');
+		// this.writer.pipe(fs.createWriteStream(location));
 	}
-	write({ index, url = '', text = '', description = '', meta = '', imgAlt }) {
+	write({ index, url = '', text = '', description = '', meta = '', imgAlt = '' }) {
+		url = url.replace(/[,"]/g, "");
+		text = text.replace(/[,"]/g, "");
+		description = description.replace(/[,"]/g, "");
+		meta = meta.replace(/[,"]/g, "");
+		imgAlt = imgAlt.replace(/[,"]/g, "");
 		return new Promise(resolve => {
-			this.writer.write([index, url, text, description, meta, imgAlt], () => resolve());
+			this.writer.write(`${index},${url},${text},${description},${meta},${imgAlt}\n`, () => resolve());
 		});
 	}
 	close() {
@@ -60,11 +66,11 @@ function compute(task, index) {
 				const $meta = $('meta[name="description"]'); // only get 1st description meta tag
 				let meta = '';
 				$('meta').each(function(i, curr) {
-					meta += $(this).attr('content') + ' . ';
+					meta += $(this).attr('content') + ' ';
 				});
 				let imgAlt = '';
 				$('img').each(function () {
-						imgAlt += $(this).attr('alt') + ' . ';
+						imgAlt += $(this).attr('alt') + ' ';
 				});
 				const description = $meta.attr('content');
 				await results.write({
