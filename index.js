@@ -96,5 +96,5 @@ const q = async.queue(async (task, cb) => {
 }, CONCURRENCY);
 
 source.forEach((curr, index) => {
-	q.push({ url: curr.field2, index }, () => { });
+	q.push({ url: curr.field2, index: curr.field1 }, () => { });
 });
