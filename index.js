@@ -13,7 +13,7 @@ class writeToStream  {
 	constructor(location) {
 		// this.writer = csvWriter({ headers: ["id", "url", "text", "description", "meta", "imgAlt"]});
 		this.writer = fs.createWriteStream(location, { flags: 'w+' });
-		this.writer.write('"id","url","text","description","meta","imgAlt"\n');
+		// this.writer.write('"id","url","text","description","meta","imgAlt"\n');
 		// this.writer.pipe(fs.createWriteStream(location));
 	}
 	write({ index, url = '', text = '', description = '', meta = '', imgAlt = '' }) {
