@@ -12,7 +12,7 @@ const CONCURRENCY = 50;
 class writeToStream  {
 	constructor(location) {
 		// this.writer = csvWriter({ headers: ["id", "url", "text", "description", "meta", "imgAlt"]});
-		this.writer = fs.createWriteStream(location);
+		this.writer = fs.createWriteStream(location, { flags: 'w+' });
 		this.writer.write('"id","url","text","description","meta","imgAlt"\n');
 		// this.writer.pipe(fs.createWriteStream(location));
 	}
@@ -88,7 +88,12 @@ function compute(task, index) {
 	})
 }
 
-
+let p = fs.readFileSync('./done.txt', { encoding: 'utf8' }).split(',');
+let pObj = {};
+for (i in p) {
+	pObj[p[i]] = true;
+}
+p = undefined;
 
 const q = async.queue(async (task, cb) => {
 	await compute(task.url, task.index);
@@ -96,5 +101,14 @@ const q = async.queue(async (task, cb) => {
 }, CONCURRENCY);
 
 source.forEach((curr, index) => {
-	q.push({ url: curr.field2, index: curr.field1 }, () => { });
+	if (!pObj[index]) {
+		q.push({ url: curr.field2, index: curr.field1 }, () => {
+			pObj[index] = true;
+			fs.appendFileSync('./done.txt', `${index},`, (err) => {
+				if (err) {
+					throw err;
+				}
+			});
+		});
+	}
 });
