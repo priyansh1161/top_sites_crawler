@@ -1,0 +1,10 @@
+[
+  {
+    "field1" : 1,
+    "field2" : "http://google.com"
+  },
+  {
+    "field1" : 1,
+    "field2" : "google.com"
+  }
+]

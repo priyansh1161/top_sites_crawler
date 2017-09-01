@@ -5,14 +5,14 @@ const csvWriter = require('csv-write-stream');
 const async = require('async');
 const csv = require('csvtojson');
 const converter = require('json2csv');
-const source = require(`./source_part_${process.env.PART || 0}.json`);
+const source = require(`./newFile.json`);
 
 const CONCURRENCY = 50;
 
 class writeToStream  {
 	constructor(location) {
 		// this.writer = csvWriter({ headers: ["id", "url", "text", "description", "meta", "imgAlt"]});
-		this.writer = fs.createWriteStream(location, { flags: 'w+' });
+		this.writer = fs.createWriteStream(location, { flags: 'a+' });
 		// this.writer.write('"id","url","text","description","meta","imgAlt"\n');
 		// this.writer.pipe(fs.createWriteStream(location));
 	}
@@ -40,6 +40,7 @@ function compute(task, index) {
 		if(!validURL.test(task)) {
 			task = 'http://' + task;
 		}
+		console.log(task);
 		request({
 			url: task,
 			method: 'GET',
